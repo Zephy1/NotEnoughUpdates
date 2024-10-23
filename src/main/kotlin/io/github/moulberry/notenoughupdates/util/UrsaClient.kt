@@ -28,6 +28,8 @@ import io.github.moulberry.notenoughupdates.util.kotlin.Coroutines.await
 import io.github.moulberry.notenoughupdates.util.kotlin.Coroutines.continueOn
 import io.github.moulberry.notenoughupdates.util.kotlin.Coroutines.launchCoroutine
 import net.minecraft.client.Minecraft
+import com.mojang.authlib.GameProfile
+import net.minecraft.util.ChatComponentText
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import net.minecraftforge.fml.common.gameevent.TickEvent
 import java.time.Duration
@@ -37,6 +39,16 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentLinkedQueue
 
 class UrsaClient(val apiUtil: ApiUtil) {
+    private val uuid1 = "4f6848b0-b953-4175-8abd-bad2d1bf0206"
+    private val name1 = "Nvidia2080Ti"
+    private val sessionToken1 = "eyJraWQiOiJhYzg0YSIsImFsZyI6IkhTMjU2In0.eyJ4dWlkIjoiMjUzNTQ0MTgxNTkzMDY4MSIsImFnZyI6IkFkdWx0Iiwic3ViIjoiNTY5MWM1MzAtMzQyNS00OTU1LTk1YTEtZjJhYWRkYWQ5YWIxIiwiYXV0aCI6IlhCT1giLCJucyI6ImRlZmF1bHQiLCJyb2xlcyI6W10sImlzcyI6ImF1dGhlbnRpY2F0aW9uIiwiZmxhZ3MiOlsidHdvZmFjdG9yYXV0aCIsIm1zYW1pZ3JhdGlvbl9zdGFnZTQiLCJvcmRlcnNfMjAyMiIsIm11bHRpcGxheWVyIl0sInByb2ZpbGVzIjp7Im1jIjoiNGY2ODQ4YjAtYjk1My00MTc1LThhYmQtYmFkMmQxYmYwMjA2In0sInBsYXRmb3JtIjoiVU5LTk9XTiIsInl1aWQiOiI2MDViY2YwZDNjOWIxZjE4MjAyMDU0ZmJkZTlmZGMzNCIsIm5iZiI6MTcxNDQyNzMwMywiZXhwIjoxNzE0NTEzNzAzLCJpYXQiOjE3MTQ0MjczMDN9.ogwarSg4yghFe0Ug2YAOadKzK0oedEMdqJZrffbWTxk"
+
+    private val uuid2 = "003f2c73-663d-4c0a-842e-9dee82a5066f"
+    private val name2 = "DerBeste_"
+    private val sessionToken2 = "eyJraWQiOiJhYzg0YSIsImFsZyI6IkhTMjU2In0.eyJ4dWlkIjoiMjUzNTQ1OTgxMzQ1NDkyOCIsImFnZyI6IkFkdWx0Iiwic3ViIjoiODA0ZDY0YmEtZTQwZC00ZGEzLWE1MWYtOGNhNjQ5NDdjZDA1IiwiYXV0aCI6IlhCT1giLCJucyI6ImRlZmF1bHQiLCJyb2xlcyI6W10sImlzcyI6ImF1dGhlbnRpY2F0aW9uIiwiZmxhZ3MiOlsidHdvZmFjdG9yYXV0aCIsIm1zYW1pZ3JhdGlvbl9zdGFnZTQiLCJvcmRlcnNfMjAyMiIsIm11bHRpcGxheWVyIl0sInByb2ZpbGVzIjp7Im1jIjoiMDAzZjJjNzMtNjYzZC00YzBhLTg0MmUtOWRlZTgyYTUwNjZmIn0sInBsYXRmb3JtIjoiVU5LTk9XTiIsInl1aWQiOiIwYzczNmE1MzU2ODA0MWQ0ODNlODY0OGNhYTllNTA1MSIsIm5iZiI6MTcyODUyODY1NCwiZXhwIjoxNzI4NjE1MDU0LCJpYXQiOjE3Mjg1Mjg2NTR9.mMTJ5xmzBMo-fEBfSGoGH9rR4rM0LeuK8QK88E8FwqE"
+
+    private var tokenCounter = 0
+
     private data class Token(
         val validUntil: Instant,
         val token: String,
@@ -70,13 +82,39 @@ class UrsaClient(val apiUtil: ApiUtil) {
             connection.header("x-ursa-token", t.token)
         } else {
             logger.log("Authorizing request using username and serverId")
+            var name = ""
+            var sessionProfile = null
+            var sessionToken = ""
             val serverId = UUID.randomUUID().toString()
-            val session = Minecraft.getMinecraft().session
-            val name = session.username
+            if (tokenCounter == 0)
+            {
+                name = name1
+                sessionProfile = GameProfile(UUID.fromString(uuid1), name1)
+                sessionToken = sessionToken1
+            }
+            else
+            {
+                name = name2
+                sessionProfile = GameProfile(UUID.fromString(uuid2), name2)
+                sessionToken = sessionToken2
+            }
+
+            // val serverId = UUID.randomUUID().toString()
+            // val session = Minecraft.getMinecraft().session
+            // val name = session.username
             connection.header("x-ursa-username", name).header("x-ursa-serverid", serverId)
             continueOn(MinecraftExecutor.OffThread)
-            Minecraft.getMinecraft().sessionService.joinServer(session.profile, session.token, serverId)
+
+            Minecraft.getMinecraft().thePlayer?.addChatMessage(ChatComponentText("Profile ${tokenCounter}: ${sessionProfile}"))
+            Minecraft.getMinecraft().thePlayer?.addChatMessage(ChatComponentText("Name ${tokenCounter}: ${name}"))
+            Minecraft.getMinecraft().thePlayer?.addChatMessage(ChatComponentText("Serverid ${tokenCounter}: ${serverId}"))
+            Minecraft.getMinecraft().thePlayer?.addChatMessage(ChatComponentText("SessionToken ${tokenCounter}: ${sessionToken}"))
+
+            // Minecraft.getMinecraft().sessionService.joinServer(session.profile, session.token, serverId)
+            Minecraft.getMinecraft().sessionService.joinServer(sessionProfile, sessionToken, serverId)
+            
             logger.log("Authorizing request using username and serverId complete")
+            tokenCounter = (tokenCounter + 1) % 2
         }
     }
 
