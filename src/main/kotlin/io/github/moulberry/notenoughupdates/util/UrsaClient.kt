@@ -20,21 +20,17 @@
 package io.github.moulberry.notenoughupdates.util
 
 import com.google.gson.JsonObject
+import com.mojang.authlib.GameProfile
 import com.mojang.authlib.exceptions.AuthenticationException
 import io.github.moulberry.notenoughupdates.NotEnoughUpdates
 import io.github.moulberry.notenoughupdates.autosubscribe.NEUAutoSubscribe
 import io.github.moulberry.notenoughupdates.options.customtypes.NEUDebugFlag
 import io.github.moulberry.notenoughupdates.util.kotlin.Coroutines.await
 import io.github.moulberry.notenoughupdates.util.kotlin.Coroutines.continueOn
-import io.github.moulberry.notenoughupdates.util.kotlin.Coroutines.launchCoroutine
 import net.minecraft.client.Minecraft
-import com.mojang.authlib.GameProfile
-import com.sun.jna.platform.win32.Advapi32Util.Account
 import net.minecraft.util.ChatComponentText
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import net.minecraftforge.fml.common.gameevent.TickEvent
-import java.time.Duration
-import java.time.Instant
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -278,11 +274,6 @@ class UrsaClient(val apiUtil: ApiUtil) {
     }
 
     private fun bumpRequests() {
-        for (account in accountList) {
-//            val c = CompletableFuture<T>()
-            launchCoroutine { performRequest(Request(path, clazz, c, account)) }
-        }
-
 //        while (!queue.isEmpty()) {
 //            if (isPollingForToken) return
 //            val nextRequest = queue.poll()
@@ -291,7 +282,7 @@ class UrsaClient(val apiUtil: ApiUtil) {
 //                return
 //            }
 //            logger.log("Request found")
-//
+
 //            for (account in accountList) {
 //                if (account.uuid == nextRequest.requestAccountData.uuid) {
 //                    launchCoroutine { performRequest(nextRequest) }
@@ -299,30 +290,30 @@ class UrsaClient(val apiUtil: ApiUtil) {
 //                }
 //            }
 //
-////            var t: Token? = null
-////            var tokenIndex = -1
-////            for (token in tokenList)
-////            {
-////                val accountIndex = token.accountIndex
-////                if (accountList[accountIndex].uuid == nextRequest.requestAccountData.uuid)
-////                {
-////                    tokenIndex = token.tokenIndex
-////                    t = token
-////                }
-////            }
+//            var t: Token? = null
+//            var tokenIndex = -1
+//            for (token in tokenList)
+//            {
+//                val accountIndex = token.accountIndex
+//                if (accountList[accountIndex].uuid == nextRequest.requestAccountData.uuid)
+//                {
+//                    tokenIndex = token.tokenIndex
+//                    t = token
+//                }
+//            }
 //
-////            if (!(t != null && t.isValid && t.obtainedFrom == ursaRoot)) {
-////                isPollingForToken = true
-////                t = null
-////                if (tokenIndex != -1)
-////                {
-////                    tokenList.removeAt(tokenIndex)
-////                    logger.log("Disposing old invalid ursa token.")
-////                }
-////
-////                logger.log("No token saved. Marking this request as a token poll request")
-////            }
-////            launchCoroutine { performRequest(nextRequest, t) }
+//            if (!(t != null && t.isValid && t.obtainedFrom == ursaRoot)) {
+//                isPollingForToken = true
+//                t = null
+//                if (tokenIndex != -1)
+//                {
+//                    tokenList.removeAt(tokenIndex)
+//                    logger.log("Disposing old invalid ursa token.")
+//                }
+//
+//                logger.log("No token saved. Marking this request as a token poll request")
+//            }
+//            launchCoroutine { performRequest(nextRequest, t) }
 //            launchCoroutine { performRequest(nextRequest) }
 //        }
     }
@@ -337,6 +328,15 @@ class UrsaClient(val apiUtil: ApiUtil) {
         val c = CompletableFuture<T>()
         queue.add(Request(path, clazz, c, accountList.random()))
         return c
+    }
+    fun <T> getAll(knownRequest: KnownRequest<T>): MutableList<CompletableFuture<T>> {
+        var list = mutableListOf<CompletableFuture<T>>()
+        for (account in accountList) {
+            val c = CompletableFuture<T>()
+            queue.add(Request(knownRequest.path, knownRequest.type, c, account))
+            list.add(c)
+        }
+        return list
     }
 
     fun getString(path: String): CompletableFuture<String> {

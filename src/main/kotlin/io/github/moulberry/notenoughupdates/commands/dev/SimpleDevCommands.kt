@@ -19,9 +19,14 @@
 
 package io.github.moulberry.notenoughupdates.commands.dev
 
+import net.minecraft.client.Minecraft
+import net.minecraft.util.ChatComponentText
 import com.mojang.brigadier.arguments.FloatArgumentType.floatArg
 import com.mojang.brigadier.arguments.StringArgumentType.string
 import io.github.moulberry.notenoughupdates.NotEnoughUpdates
+import io.github.moulberry.notenoughupdates.NEUManager
+import io.github.moulberry.notenoughupdates.util.UrsaClient
+import io.github.moulberry.notenoughupdates.util.Utils
 import io.github.moulberry.notenoughupdates.autosubscribe.NEUAutoSubscribe
 import io.github.moulberry.notenoughupdates.dungeons.DungeonWin
 import io.github.moulberry.notenoughupdates.events.RegisterBrigadierCommandEvent
@@ -123,5 +128,35 @@ class SimpleDevCommands {
                 reply("Reset NEU slot locking")
             }
         }.withHelp("Resets locked slots")
+
+        event.command("neutestplayer") {
+            thenArgumentExecute("uuid", string()) { uuid ->
+                NotEnoughUpdates.INSTANCE.manager.ursaClient
+                    .get(UrsaClient.profiles(Utils.parseDashlessUUID(this[uuid])))
+                    .thenAccept({
+                            playerJson -> if (playerJson != null &&
+                        playerJson.has("success") &&
+                        playerJson.get("success").getAsBoolean())
+                    {
+                        Minecraft.getMinecraft().thePlayer?.addChatMessage(ChatComponentText("Player: ${playerJson.asString}"))
+                    }
+                    })
+            }.withHelp("Set the radius of the nullzee sphere")
+        }.withHelp("Reload the NEU data repository from disk (not from network)")
+
+        event.command("neutestallaccounts") {
+            val requestList = NotEnoughUpdates.INSTANCE.manager.ursaClient.getAll(UrsaClient.profiles(Utils.parseDashlessUUID("4f6848b0b95341758abdbad2d1bf0206")))
+            for (request in requestList) {
+                request
+                .thenAccept({
+                    playerJson -> if (playerJson != null &&
+                    playerJson.has("success") &&
+                    playerJson.get("success").getAsBoolean())
+                {
+                    Minecraft.getMinecraft().thePlayer?.addChatMessage(ChatComponentText("Player: ${playerJson.asString}"))
+                }
+                })
+            }
+        }.withHelp("Reload the NEU data repository from disk (not from network)")
     }
 }
