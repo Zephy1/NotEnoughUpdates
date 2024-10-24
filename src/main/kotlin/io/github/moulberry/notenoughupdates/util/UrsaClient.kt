@@ -27,10 +27,13 @@ import io.github.moulberry.notenoughupdates.autosubscribe.NEUAutoSubscribe
 import io.github.moulberry.notenoughupdates.options.customtypes.NEUDebugFlag
 import io.github.moulberry.notenoughupdates.util.kotlin.Coroutines.await
 import io.github.moulberry.notenoughupdates.util.kotlin.Coroutines.continueOn
+import io.github.moulberry.notenoughupdates.util.kotlin.Coroutines.launchCoroutine
 import net.minecraft.client.Minecraft
 import net.minecraft.util.ChatComponentText
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import net.minecraftforge.fml.common.gameevent.TickEvent
+import java.time.Duration
+import java.time.Instant
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -205,34 +208,34 @@ class UrsaClient(val apiUtil: ApiUtil) {
             connection.header("x-ursa-username", accountData.username).header("x-ursa-serverid", serverId)
             continueOn(MinecraftExecutor.OffThread)
 
-            Minecraft.getMinecraft().thePlayer?.addChatMessage(ChatComponentText("3 | ${accountData.username}"))
+//            Minecraft.getMinecraft().thePlayer?.addChatMessage(ChatComponentText("3 | ${accountData.username}"))
             Minecraft.getMinecraft().sessionService.joinServer(GameProfile(UUID.fromString(accountData.uuid), accountData.username), accountData.sessionToken, serverId)
 
             logger.log("Authorizing request using username and serverId complete")
 //        }
     }
 
-//    private suspend fun saveToken(usedUrsaRoot: String, connection: ApiUtil.Request, accountData: AccountData) {
-//        logger.log("Attempting to save token")
-//        val token =
-//            connection.responseHeaders["x-ursa-token"]?.firstOrNull()
+    private suspend fun saveToken(usedUrsaRoot: String, connection: ApiUtil.Request, accountData: AccountData) {
+        logger.log("Attempting to save token")
+        val token =
+            connection.responseHeaders["x-ursa-token"]?.firstOrNull()
 //        val validUntil = connection.responseHeaders["x-ursa-expires"]
 //            ?.firstOrNull()
 //            ?.toLongOrNull()
 //            ?.let { Instant.ofEpochMilli(it) } ?: (Instant.now() + Duration.ofMinutes(55))
-//        continueOn(MinecraftExecutor.OnThread)
-//        if (token == null) {
-//            isPollingForToken = false
-//            logger.log("No token found. Marking as non polling")
-//        } else {
-//            val index = accountList.indexOf(accountData)
-//            Minecraft.getMinecraft().thePlayer?.addChatMessage(ChatComponentText("0 | ${index} | ${accountData}"))
+        continueOn(MinecraftExecutor.OnThread)
+        if (token == null) {
+            isPollingForToken = false
+            logger.log("No token found. Marking as non polling")
+        } else {
+            val index = accountList.indexOf(accountData)
+            Minecraft.getMinecraft().thePlayer?.addChatMessage(ChatComponentText("0 | ${index} | ${accountData}"))
 //            tokenList.add(Token(validUntil, token, usedUrsaRoot, accountList.indexOf(accountData), tokenList.lastIndex))
-//            isPollingForToken = false
-//            authenticationState = AuthenticationState.SUCCEEDED
-//            logger.log("Token saving successful")
-//        }
-//    }
+            isPollingForToken = false
+            authenticationState = AuthenticationState.SUCCEEDED
+            logger.log("Token saving successful")
+        }
+    }
 
 //    private suspend fun <T> performRequest(request: Request<T>, token: Token?) {
     private suspend fun <T> performRequest(request: Request<T>) {
@@ -240,7 +243,7 @@ class UrsaClient(val apiUtil: ApiUtil) {
         val apiRequest = apiUtil.request().url("$usedUrsaRoot/${request.path}")
         try {
             logger.log("Ursa Request started")
-            Minecraft.getMinecraft().thePlayer?.addChatMessage(ChatComponentText("1 | ${request.requestAccountData.username}"))
+//            Minecraft.getMinecraft().thePlayer?.addChatMessage(ChatComponentText("1 | ${request.requestAccountData.username}"))
 //            authorizeRequest(usedUrsaRoot, apiRequest, token, request.requestAccountData)
             authorizeRequest(usedUrsaRoot, apiRequest, request.requestAccountData)
             val response =
@@ -250,7 +253,7 @@ class UrsaClient(val apiUtil: ApiUtil) {
                     (apiRequest.requestJson(request.objectMapping).await() as T)
             logger.log("Request completed")
             Minecraft.getMinecraft().thePlayer?.addChatMessage(ChatComponentText("2 | ${request.requestAccountData.username}"))
-//            saveToken(usedUrsaRoot, apiRequest, request.requestAccountData)
+            saveToken(usedUrsaRoot, apiRequest, request.requestAccountData)
 
             request.consumer.complete(response)
         } catch (e: Exception) {
@@ -274,14 +277,14 @@ class UrsaClient(val apiUtil: ApiUtil) {
     }
 
     private fun bumpRequests() {
-//        while (!queue.isEmpty()) {
-//            if (isPollingForToken) return
-//            val nextRequest = queue.poll()
-//            if (nextRequest == null) {
-//                logger.log("No request to bump found")
-//                return
-//            }
-//            logger.log("Request found")
+        while (!queue.isEmpty()) {
+            if (isPollingForToken) return
+            val nextRequest = queue.poll()
+            if (nextRequest == null) {
+                logger.log("No request to bump found")
+                return
+            }
+            logger.log("Request found")
 
 //            for (account in accountList) {
 //                if (account.uuid == nextRequest.requestAccountData.uuid) {
@@ -314,8 +317,8 @@ class UrsaClient(val apiUtil: ApiUtil) {
 //                logger.log("No token saved. Marking this request as a token poll request")
 //            }
 //            launchCoroutine { performRequest(nextRequest, t) }
-//            launchCoroutine { performRequest(nextRequest) }
-//        }
+            launchCoroutine { performRequest(nextRequest) }
+        }
     }
 
     fun clearToken() {

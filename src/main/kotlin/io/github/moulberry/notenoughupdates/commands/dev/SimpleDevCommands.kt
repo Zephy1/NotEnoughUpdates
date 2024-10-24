@@ -138,24 +138,31 @@ class SimpleDevCommands {
                         playerJson.has("success") &&
                         playerJson.get("success").getAsBoolean())
                     {
-                        Minecraft.getMinecraft().thePlayer?.addChatMessage(ChatComponentText("Player: ${playerJson.asString}"))
+                        NotEnoughUpdates.INSTANCE.addChatMessage("Player: ${playerJson.asString}")
                     }
                     })
             }.withHelp("Set the radius of the nullzee sphere")
         }.withHelp("Reload the NEU data repository from disk (not from network)")
 
         event.command("neutestallaccounts") {
-            val requestList = NotEnoughUpdates.INSTANCE.manager.ursaClient.getAll(UrsaClient.profiles(Utils.parseDashlessUUID("4f6848b0b95341758abdbad2d1bf0206")))
-            for (request in requestList) {
-                request
-                .thenAccept({
-                    playerJson -> if (playerJson != null &&
-                    playerJson.has("success") &&
-                    playerJson.get("success").getAsBoolean())
-                {
-                    Minecraft.getMinecraft().thePlayer?.addChatMessage(ChatComponentText("Player: ${playerJson.asString}"))
+            thenExecute {
+                var successCount = 0
+
+                val requestList = NotEnoughUpdates.INSTANCE.manager.ursaClient.getAll(UrsaClient.profiles(Utils.parseDashlessUUID("4f6848b0b95341758abdbad2d1bf0206")))
+                for (request in requestList) {
+//                    NotEnoughUpdates.INSTANCE.addChatMessage("2 | Requesting ${request}")
+                    request
+                        .thenAccept({
+                                playerJson -> if (playerJson != null &&
+                            playerJson.has("success") &&
+                            playerJson.get("success").getAsBoolean())
+                        {
+                            successCount++
+                            NotEnoughUpdates.INSTANCE.addChatMessage("3 | Player: ${playerJson.asString}")
+                        }
+                        })
                 }
-                })
+                NotEnoughUpdates.INSTANCE.addChatMessage("4 | Success count: ${successCount}/${requestList.size}")
             }
         }.withHelp("Reload the NEU data repository from disk (not from network)")
     }

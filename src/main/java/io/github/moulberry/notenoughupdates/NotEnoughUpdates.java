@@ -375,6 +375,10 @@ public class NotEnoughUpdates {
 		}
 	}
 
+	public void addChatMessage(String message) {
+		Minecraft.getMinecraft().thePlayer.addChatMessage(new ChatComponentText(message));
+	}
+
 	public void trySendCommand(String message) {
 		if (ClientCommandHandler.instance.executeCommand(Minecraft.getMinecraft().thePlayer, message) == 0) {
 			sendChatMessage(message);
