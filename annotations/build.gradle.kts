@@ -22,6 +22,10 @@ plugins {
 		java
 }
 
+kotlin {
+    jvmToolchain(8)
+}
+
 repositories {
 		mavenCentral()
 }
